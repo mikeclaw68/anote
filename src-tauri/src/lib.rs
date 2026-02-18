@@ -536,6 +536,61 @@ fn export_backup(db: State<Db>) -> Result<String, String> {
     Ok(file_path.to_string_lossy().to_string())
 }
 
+// ===== PDF Export command =====
+
+#[tauri::command]
+fn export_note_pdf(db: State<Db>, id: String, path: String) -> Result<(), String> {
+    use printpdf::*;
+
+    // Get note from database
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    let note: (String, String) = conn
+        .query_row(
+            "SELECT title, body FROM notes WHERE id = ?1",
+            rusqlite::params![id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|e| e.to_string())?;
+    
+    let (title, body) = note;
+
+    // Create PDF document
+    let (doc, page1, layer1) = PdfDocument::new(
+        &title,
+        Mm(210.0),  // A4 width
+        Mm(297.0),  // A4 height
+        "Layer 1",
+    );
+
+    let current_layer = doc.get_page(page1).get_layer(layer1);
+
+    // Use built-in font
+    let font = doc.add_builtin_font(BuiltinFont::Helvetica).map_err(|e| e.to_string())?;
+    let font_bold = doc.add_builtin_font(BuiltinFont::HelveticaBold).map_err(|e| e.to_string())?;
+
+    // Add title
+    current_layer.use_text(&title, 18.0, Mm(20.0), Mm(277.0), &font_bold);
+
+    // Add content - simple text wrapping
+    let content_lines: Vec<&str> = body.lines().collect();
+    let mut y_position = 260.0;
+    let line_height = 5.0;
+    
+    for line in content_lines {
+        if y_position < 20.0 {
+            break; // Stop if we run out of page space
+        }
+        current_layer.use_text(line, 12.0, Mm(20.0), Mm(y_position), &font);
+        y_position -= line_height;
+    }
+
+    // Save the PDF
+    let file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+    doc.save(&mut std::io::BufWriter::new(file)).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn get_sync_token_from_conn(conn: &Connection) -> Result<i64, String> {
     // A single monotonic-ish value used by the frontend to detect external DB mutations.
     conn.query_row(
@@ -580,6 +635,9 @@ pub fn run() {
 
             app.manage(Db(Mutex::new(conn)));
 
+            // Add dialog plugin for file save dialogs
+            app.handle().plugin(tauri_plugin_dialog::init());
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -613,6 +671,7 @@ pub fn run() {
             import_data,
             export_backup,
             get_sync_token,
+            export_note_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

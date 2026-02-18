@@ -158,6 +158,15 @@ export const DataLayer = {
       return [];
     }
   },
+
+  async exportNotePdf(noteId, path) {
+    try {
+      await invoke('export_note_pdf', { id: noteId, path });
+    } catch (e) {
+      console.error('Failed to export note as PDF:', e);
+      throw e;
+    }
+  },
 };
 
 export async function migrateLocalStorage() {
