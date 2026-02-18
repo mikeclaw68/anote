@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { save } from '@tauri-apps/plugin-dialog';
 import { icons } from './icons.js';
 import { state, DataLayer, loadTheme, saveTheme, generateId, formatDate, escapeHtml, rebuildIndexes } from './state.js';
 import { createEditor, destroyEditor, focusEditor, getEditorView, updateFindHighlights } from './editor.js';
@@ -1460,6 +1461,42 @@ async function deleteNote(id) {
   await invoke('delete_note', { id });
 }
 
+async function exportNotePdf(noteId, noteTitle) {
+  try {
+    // Use Tauri dialog to get save location
+    const filePath = await save({
+      defaultPath: `${noteTitle || 'note'}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    
+    if (filePath) {
+      await DataLayer.exportNotePdf(noteId, filePath);
+      console.log('Note exported to:', filePath);
+    }
+  } catch (e) {
+    console.error('Failed to export PDF:', e);
+    alert('Failed to export note as PDF: ' + e);
+  }
+}
+
+async function exportNoteHtml(noteId, noteTitle) {
+  try {
+    // Use Tauri dialog to get save location
+    const filePath = await save({
+      defaultPath: `${noteTitle || 'note'}.html`,
+      filters: [{ name: 'HTML', extensions: ['html'] }]
+    });
+    
+    if (filePath) {
+      await DataLayer.exportNoteHtml(noteId, filePath);
+      console.log('Note exported to:', filePath);
+    }
+  } catch (e) {
+    console.error('Failed to export HTML:', e);
+    alert('Failed to export note as HTML: ' + e);
+  }
+}
+
 // ===== DRAG-AND-DROP =====
 function onNoteDragStart(e, id) {
   draggedNoteId = id;
@@ -1637,6 +1674,12 @@ function showNoteContextMenu(e, noteId) {
   menu.innerHTML = `
     <button class="context-menu-item" onclick="closeContextMenu(); togglePinNote('${noteId}')">
       ${icons.pin} ${pinLabel}
+    </button>
+    <button class="context-menu-item" onclick="closeContextMenu(); exportNotePdf('${noteId}', '${escapeHtml(note.title)}')">
+      ${icons.pdf} Export as PDF
+    </button>
+    <button class="context-menu-item" onclick="closeContextMenu(); exportNoteHtml('${noteId}', '${escapeHtml(note.title)}')">
+      ${icons.html} Export as HTML
     </button>
     <div class="context-menu-separator"></div>
     <div class="context-menu-submenu">
@@ -1970,6 +2013,8 @@ window.selectTag = selectTag;
 window.showTagContextMenu = showTagContextMenu;
 window.deleteTag = deleteTag;
 window.toggleNoteTag = toggleNoteTag;
+window.exportNotePdf = exportNotePdf;
+window.exportNoteHtml = exportNoteHtml;
 window.onNoteDragStart = onNoteDragStart;
 window.onNoteDragOver = onNoteDragOver;
 window.onNoteDragLeave = onNoteDragLeave;

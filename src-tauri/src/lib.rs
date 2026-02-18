@@ -591,6 +591,123 @@ fn export_note_pdf(db: State<Db>, id: String, path: String) -> Result<(), String
     Ok(())
 }
 
+// ===== HTML Export command =====
+
+#[tauri::command]
+fn export_note_html(db: State<Db>, id: String, path: String) -> Result<(), String> {
+    use pulldown_cmark::{html, Options, Parser};
+
+    // Get note from database
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    let note: (String, String, i64, i64) = conn
+        .query_row(
+            "SELECT title, body, created_at, updated_at FROM notes WHERE id = ?1",
+            rusqlite::params![id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .map_err(|e| e.to_string())?;
+    
+    let (title, body, created_at, updated_at) = note;
+
+    // Convert markdown to HTML
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_TABLES);
+    options.insert(Options::ENABLE_FOOTNOTES);
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_TASKLISTS);
+    
+    let parser = Parser::new_ext(&body, options);
+    let mut html_body = String::new();
+    html::push_html(&mut html_body, parser);
+
+    // Format timestamps
+    let created = chrono::DateTime::from_timestamp_millis(created_at)
+        .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
+        .unwrap_or_else(|| "Unknown".to_string());
+    let updated = chrono::DateTime::from_timestamp_millis(updated_at)
+        .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    // Build the HTML document
+    let html_content = format!(r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+            background: #fafafa;
+        }}
+        h1, h2, h3, h4, h5, h6 {{
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }}
+        h1 {{ font-size: 2em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }}
+        h2 {{ font-size: 1.5em; }}
+        h3 {{ font-size: 1.25em; }}
+        pre {{
+            background: #f4f4f4;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }}
+        code {{
+            font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9em;
+        }}
+        blockquote {{
+            border-left: 4px solid #ddd;
+            margin: 0;
+            padding-left: 16px;
+            color: #666;
+        }}
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }}
+        th {{ background: #f4f4f4; }}
+        img {{ max-width: 100%; height: auto; }}
+        a {{ color: #0066cc; }}
+        .metadata {{
+            color: #888;
+            font-size: 0.85em;
+            margin-bottom: 2em;
+            padding-bottom: 1em;
+            border-bottom: 1px solid #eee;
+        }}
+    </style>
+</head>
+<body>
+    <h1>{title}</h1>
+    <div class="metadata">
+        Created: {created} | Last modified: {updated}
+    </div>
+    <div class="content">
+{html_body}
+    </div>
+</body>
+</html>"#);
+
+    // Write the HTML file
+    std::fs::write(&path, html_content).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn get_sync_token_from_conn(conn: &Connection) -> Result<i64, String> {
     // A single monotonic-ish value used by the frontend to detect external DB mutations.
     conn.query_row(
@@ -672,6 +789,7 @@ pub fn run() {
             export_backup,
             get_sync_token,
             export_note_pdf,
+            export_note_html,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

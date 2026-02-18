@@ -167,6 +167,15 @@ export const DataLayer = {
       throw e;
     }
   },
+
+  async exportNoteHtml(noteId, path) {
+    try {
+      await invoke('export_note_html', { id: noteId, path });
+    } catch (e) {
+      console.error('Failed to export note as HTML:', e);
+      throw e;
+    }
+  },
 };
 
 export async function migrateLocalStorage() {

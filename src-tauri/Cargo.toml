@@ -34,3 +34,4 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 dirs = "6"
 chrono = "0.4"
 printpdf = "0.7"
+pulldown-cmark = "0.12"
