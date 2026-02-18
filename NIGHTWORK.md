@@ -123,7 +123,7 @@ ALTER TABLE notes ADD COLUMN starred INTEGER NOT NULL DEFAULT 0;
 ## Current Status
 - [x] Pin/star column exists in DB
 - [x] Tags system (completed 2026-02-18)
-- [ ] Export PDF (not started)
+- [x] Export PDF (completed 2026-02-18)
 - [ ] Export HTML (not started)
 - [ ] Export Markdown (not started)
 - [ ] Nested folders UI (partial, backend exists)
