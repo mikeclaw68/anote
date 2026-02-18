@@ -1080,7 +1080,7 @@ function showFolderContextMenu(e, folderId) {
         </button>
         ${availableFolders}
       </div>
-    </button>
+    </div>
     <div class="context-menu-separator"></div>
     <button class="context-menu-item danger" onclick="closeContextMenu(); deleteFolder('${folderId}')">
       ${icons.trash} Delete folder

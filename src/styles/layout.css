@@ -435,6 +435,10 @@
   display: block;
 }
 
+.context-menu-item.has-submenu:focus-within .context-submenu {
+  display: block;
+}
+
 /* Settings modal */
 .modal-overlay {
   position: fixed;
