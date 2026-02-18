@@ -98,7 +98,7 @@ ALTER TABLE notes ADD COLUMN starred INTEGER NOT NULL DEFAULT 0;
 ## Working Instructions
 
 ### Setup
-1. Repository: `/home/mike/.openclaw/workspace/anote`
+1. Repository: /home/mike/.openclaw/workspace/anote
 2. Work on branches from `main`
 3. Push changes and create PRs regularly
 
@@ -124,7 +124,7 @@ ALTER TABLE notes ADD COLUMN starred INTEGER NOT NULL DEFAULT 0;
 - [x] Pin/star column exists in DB
 - [x] Tags system (completed 2026-02-18)
 - [x] Export PDF (completed 2026-02-18)
-- [ ] Export HTML (not started)
+- [x] Export HTML (completed 2026-02-18)
 - [ ] Export Markdown (not started)
 - [ ] Nested folders UI (partial, backend exists)
 - [ ] Note templates (not started)
